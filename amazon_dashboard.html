@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataPrime — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #FF9900;
+    --orange-deep: #E47911;
+    --orange-glow: rgba(255,153,0,0.18);
+    --orange-lite: rgba(255,153,0,0.08);
+    --black: #0A0A0A;
+    --surface: #141414;
+    --surface2: #1C1C1C;
+    --surface3: #252525;
+    --border: rgba(255,153,0,0.15);
+    --text: #F0EDE8;
+    --text-muted: #888;
+    --success: #00C896;
+    --danger: #FF4C4C;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,153,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,153,0,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(12px);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 26px; font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .logo span { color: var(--orange); }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--orange);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-size: 18px;
+  }
+  .header-badge {
+    font-size: 12px; color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 20px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  /* ── UPLOAD SECTION ── */
+  #upload-section {
+    position: relative; z-index: 1;
+    padding: 60px 48px 40px;
+  }
+  .section-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 38px; font-weight: 700;
+    line-height: 1.1; margin-bottom: 10px;
+  }
+  .section-sub {
+    color: var(--text-muted); font-size: 15px;
+    margin-bottom: 40px;
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .upload-card {
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: 16px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--orange-lite);
+    opacity: 0; transition: opacity 0.25s;
+    border-radius: 14px;
+  }
+  .upload-card:hover { border-color: var(--orange); transform: translateY(-3px); }
+  .upload-card:hover::before { opacity: 1; }
+  .upload-card.loaded {
+    border-style: solid; border-color: var(--orange);
+    background: rgba(255,153,0,0.06);
+  }
+  .upload-card.loaded::before { opacity: 1; }
+
+  .upload-icon {
+    width: 52px; height: 52px;
+    margin: 0 auto 14px;
+    background: var(--surface3);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: 24px;
+    transition: background 0.2s;
+  }
+  .upload-card:hover .upload-icon,
+  .upload-card.loaded .upload-icon {
+    background: var(--orange-glow);
+  }
+  .upload-card-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px; font-weight: 600;
+    letter-spacing: 0.05em; margin-bottom: 5px;
+  }
+  .upload-card-hint {
+    font-size: 11px; color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .upload-status {
+    margin-top: 10px; font-size: 11px;
+    color: var(--success); font-weight: 500;
+    display: none;
+  }
+  .upload-card.loaded .upload-status { display: block; }
+  input[type="file"] { display: none; }
+
+  /* CTA button */
+  .cta-wrap { text-align: center; margin-top: 8px; }
+  .cta-btn {
+    background: var(--orange);
+    color: #000;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px; font-weight: 700;
+    letter-spacing: 0.08em;
+    border: none; cursor: pointer;
+    padding: 18px 56px;
+    border-radius: 50px;
+    transition: all 0.2s;
+    box-shadow: 0 0 40px rgba(255,153,0,0.3);
+    text-transform: uppercase;
+  }
+  .cta-btn:hover {
+    background: #FFB340;
+    transform: scale(1.04);
+    box-shadow: 0 0 60px rgba(255,153,0,0.5);
+  }
+  .cta-btn:disabled {
+    background: #555; color: #888; cursor: not-allowed;
+    box-shadow: none; transform: none;
+  }
+  .cta-sub { color: var(--text-muted); font-size: 13px; margin-top: 10px; }
+
+  /* ── DASHBOARD ── */
+  #dashboard-section {
+    display: none;
+    position: relative; z-index: 1;
+    padding: 0 48px 80px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 0 48px 50px;
+  }
+
+  /* Filters bar */
+  .filters-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 28px;
+    display: flex; align-items: flex-end;
+    gap: 24px; flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 180px; }
+  .filter-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--orange);
+    font-family: 'Rajdhani', sans-serif; font-weight: 600;
+  }
+  .filter-select, .filter-input {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .filter-select:focus, .filter-input:focus { border-color: var(--orange); }
+  .filter-select option { background: #1C1C1C; }
+
+  /* KPI buckets */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 26px 24px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--orange); transform: translateY(-2px); }
+  .kpi-card::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--orange);
+    border-radius: 16px 16px 0 0;
+  }
+  .kpi-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--text-muted);
+    margin-bottom: 12px; font-family: 'Rajdhani', sans-serif;
+  }
+  .kpi-value {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 42px; font-weight: 700;
+    color: var(--orange); line-height: 1;
+  }
+  .kpi-sub {
+    font-size: 12px; color: var(--text-muted); margin-top: 6px;
+  }
+  .kpi-icon {
+    position: absolute; right: 18px; top: 18px;
+    font-size: 28px; opacity: 0.12;
+  }
+
+  /* Charts row */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 36px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .chart-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px; font-weight: 600;
+    letter-spacing: 0.05em; margin-bottom: 4px;
+  }
+  .chart-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+  .chart-wrap { position: relative; height: 300px; }
+
+  /* Table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    overflow: hidden;
+  }
+  .table-header-row {
+    display: flex; justify-content: space-between;
+    align-items: flex-end; margin-bottom: 20px;
+  }
+  .cities-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .cities-table th {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--orange);
+    text-align: left; padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cities-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255,153,0,0.05);
+  }
+  .cities-table tr:hover td { background: var(--orange-lite); }
+  .rank-badge {
+    display: inline-block;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--surface3);
+    text-align: center; line-height: 26px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 700;
+  }
+  .rank-badge.gold { background: rgba(255,153,0,0.25); color: var(--orange); }
+  .rank-badge.silver { background: rgba(192,192,192,0.15); color: #C0C0C0; }
+  .rank-badge.bronze { background: rgba(205,127,50,0.15); color: #CD7F32; }
+
+  /* Progress bar for table */
+  .progress-bar-bg {
+    height: 6px; background: var(--surface3);
+    border-radius: 3px; overflow: hidden; min-width: 80px;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--orange); border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  /* Loading overlay */
+  #loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+  }
+  #loading-overlay.active { display: flex; }
+  .loader-ring {
+    width: 64px; height: 64px;
+    border: 3px solid var(--surface3);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px; letter-spacing: 0.1em;
+    color: var(--orange);
+  }
+
+  /* Fade in animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp 0.5s ease forwards; }
+  .fade-up-d1 { animation-delay: 0.1s; opacity: 0; }
+  .fade-up-d2 { animation-delay: 0.2s; opacity: 0; }
+  .fade-up-d3 { animation-delay: 0.3s; opacity: 0; }
+  .fade-up-d4 { animation-delay: 0.4s; opacity: 0; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 1100px) {
+    .upload-grid { grid-template-columns: repeat(3, 1fr); }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    header, #upload-section, #dashboard-section, .divider { padding-left: 24px; padding-right: 24px; }
+    .divider { margin-left: 24px; margin-right: 24px; }
+  }
+  @media (max-width: 700px) {
+    .upload-grid { grid-template-columns: 1fr 1fr; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .section-title { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-overlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Crunching your data…</div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    Data<span>Prime</span>
+  </div>
+  <div class="header-badge">Analytics Dashboard</div>
+</header>
+
+<!-- Upload Section -->
+<section id="upload-section">
+  <div class="section-label">Step 1 — Upload</div>
+  <h1 class="section-title">Drop your data,<br>watch it <span style="color:var(--orange)">come alive.</span></h1>
+  <p class="section-sub">Upload your five CSV files below. Each container knows what it's looking for.</p>
+
+  <div class="upload-grid">
+
+    <div class="upload-card" id="card-customers" onclick="document.getElementById('file-customers').click()">
+      <input type="file" id="file-customers" accept=".csv" onchange="handleUpload('customers', this)">
+      <div class="upload-icon">👤</div>
+      <div class="upload-card-title">Customers</div>
+      <div class="upload-card-hint">Customer IDs, names, cities, countries, demographics</div>
+      <div class="upload-status" id="status-customers">✓ Loaded</div>
+    </div>
+
+    <div class="upload-card" id="card-orders" onclick="document.getElementById('file-orders').click()">
+      <input type="file" id="file-orders" accept=".csv" onchange="handleUpload('orders', this)">
+      <div class="upload-icon">🛒</div>
+      <div class="upload-card-title">Order Items</div>
+      <div class="upload-card-hint">Order lines, quantities, product refs, order dates</div>
+      <div class="upload-status" id="status-orders">✓ Loaded</div>
+    </div>
+
+    <div class="upload-card" id="card-payments" onclick="document.getElementById('file-payments').click()">
+      <input type="file" id="file-payments" accept=".csv" onchange="handleUpload('payments', this)">
+      <div class="upload-icon">💳</div>
+      <div class="upload-card-title">Payments</div>
+      <div class="upload-card-hint">Payment amounts, methods, dates, statuses</div>
+      <div class="upload-status" id="status-payments">✓ Loaded</div>
+    </div>
+
+    <div class="upload-card" id="card-products" onclick="document.getElementById('file-products').click()">
+      <input type="file" id="file-products" accept=".csv" onchange="handleUpload('products', this)">
+      <div class="upload-icon">📦</div>
+      <div class="upload-card-title">Products</div>
+      <div class="upload-card-hint">Product names, categories, prices, inventory</div>
+      <div class="upload-status" id="status-products">✓ Loaded</div>
+    </div>
+
+    <div class="upload-card" id="card-transactions" onclick="document.getElementById('file-transactions').click()">
+      <input type="file" id="file-transactions" accept=".csv" onchange="handleUpload('transactions', this)">
+      <div class="upload-icon">📊</div>
+      <div class="upload-card-title">Transactions</div>
+      <div class="upload-card-hint">Transaction records, amounts, delivery status, timestamps</div>
+      <div class="upload-status" id="status-transactions">✓ Loaded</div>
+    </div>
+
+  </div>
+
+  <div class="cta-wrap">
+    <button class="cta-btn" id="analyze-btn" onclick="buildDashboard()" disabled>
+      🚀 Let's Analyze It!
+    </button>
+    <div class="cta-sub" id="cta-hint">Upload at least one file to get started</div>
+  </div>
+</section>
+
+<div class="divider" id="dash-divider" style="display:none"></div>
+
+<!-- Dashboard Section -->
+<section id="dashboard-section">
+
+  <!-- Filters -->
+  <div class="filters-bar fade-up fade-up-d1">
+    <div class="filter-group">
+      <span class="filter-label">Metric Type</span>
+      <select class="filter-select" id="filter-metric" onchange="applyFilters()">
+        <option value="late_delivery">% Late Deliveries</option>
+        <option value="total_purchases">Total Purchases</option>
+        <option value="total_customers">Total Customers</option>
+        <option value="total_revenue">Total Revenue (USD)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Time Granularity</span>
+      <select class="filter-select" id="filter-granularity" onchange="applyFilters()">
+        <option value="weekly">Weekly</option>
+        <option value="monthly" selected>Monthly</option>
+        <option value="yearly">Yearly</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Date From</span>
+      <input type="date" class="filter-input" id="filter-date-from" onchange="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Date To</span>
+      <input type="date" class="filter-input" id="filter-date-to" onchange="applyFilters()">
+    </div>
+  </div>
+
+  <!-- KPI Buckets -->
+  <div class="kpi-grid fade-up fade-up-d2">
+    <div class="kpi-card">
+      <div class="kpi-icon">🚚</div>
+      <div class="kpi-label">Delivered On Time</div>
+      <div class="kpi-value" id="kpi-late">—</div>
+      <div class="kpi-sub">of all orders (status = delivered)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🛒</div>
+      <div class="kpi-label">Total Purchases</div>
+      <div class="kpi-value" id="kpi-purchases">—</div>
+      <div class="kpi-sub">order line items</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">Total Customers</div>
+      <div class="kpi-value" id="kpi-customers">—</div>
+      <div class="kpi-sub">unique customers</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" id="kpi-revenue">—</div>
+      <div class="kpi-sub">USD</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row fade-up fade-up-d3">
+    <div class="chart-card">
+      <div class="chart-title">Trend Analysis</div>
+      <div class="chart-sub" id="trend-sub">Filtered by all active filters</div>
+      <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top Product Categories</div>
+      <div class="chart-sub">Filtered by all active filters</div>
+      <div class="chart-wrap"><canvas id="category-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Cities Table -->
+  <div class="table-card fade-up fade-up-d4">
+    <div class="table-header-row">
+      <div>
+        <div class="chart-title">Top Cities</div>
+        <div class="chart-sub">Where your customers are shopping from</div>
+      </div>
+    </div>
+    <table class="cities-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>City</th>
+          <th>Customers</th>
+          <th>Revenue (USD)</th>
+          <th>Share</th>
+        </tr>
+      </thead>
+      <tbody id="cities-tbody"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<script>
+// ══════════════════════════════════════════════════
+//  DATA STORE
+// ══════════════════════════════════════════════════
+const store = {
+  customers: null,    // customer_id, customer_city, ...
+  orders: null,       // order_id, product_id, price, ...
+  payments: null,     // order_id, payment_value, ...
+  products: null,     // product_id, product_category_name, ...
+  transactions: null  // order_id, customer_id, order_status, order_purchase_timestamp, ...
+};
+
+// Pre-built lookup maps (populated after all uploads)
+let txByOrderId   = {};   // order_id  → transaction row
+let txByCustomerId = {};  // customer_id → [transaction rows]
+let payByOrderId  = {};   // order_id  → [payment rows]
+let ordersByOrderId = {}; // order_id  → [order-item rows]
+let productById   = {};   // product_id → product row
+let customerById  = {};   // customer_id → customer row
+
+let uploadedCount = 0;
+let trendChart    = null;
+let categoryChart = null;
+
+// ══════════════════════════════════════════════════
+//  UPLOAD HANDLER
+// ══════════════════════════════════════════════════
+function handleUpload(key, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const result = Papa.parse(e.target.result, {
+      header: true, skipEmptyLines: true, dynamicTyping: true
+    });
+    // Normalize all column names to lowercase + underscores
+    store[key] = result.data.map(row => {
+      const norm = {};
+      for (const k in row) norm[k.trim().toLowerCase().replace(/[\s\-\.]+/g, '_')] = row[k];
+      return norm;
+    });
+
+    document.getElementById(`card-${key}`).classList.add('loaded');
+    document.getElementById(`status-${key}`).textContent =
+      `✓ ${result.data.length.toLocaleString()} rows loaded`;
+
+    uploadedCount++;
+    document.getElementById('analyze-btn').disabled = false;
+    document.getElementById('cta-hint').textContent =
+      `${uploadedCount} file(s) ready — more files = richer insights`;
+  };
+  reader.readAsText(file);
+}
+
+// ══════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════
+function parseDate(val) {
+  if (val === null || val === undefined || val === '') return null;
+  const d = new Date(val);
+  return isNaN(d) ? null : d;
+}
+
+function periodKey(date, granularity) {
+  if (!date) return null;
+  const d = new Date(date);
+  if (isNaN(d)) return null;
+  if (granularity === 'yearly')  return `${d.getFullYear()}`;
+  if (granularity === 'monthly') return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  if (granularity === 'weekly') {
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+// Generic column finder by priority keywords
+function findCol(rows, keywords) {
+  if (!rows || !rows.length) return null;
+  const keys = Object.keys(rows[0]);
+  for (const kw of keywords) {
+    const m = keys.find(k => k === kw || k.endsWith('_' + kw) || k.startsWith(kw + '_') || k.includes(kw));
+    if (m) return m;
+  }
+  return null;
+}
+
+// Specific finders
+const findOrderIdCol    = r => findCol(r, ['order_id','orderid']);
+const findCustomerIdCol = r => findCol(r, ['customer_id','customerid','cust_id']);
+const findProductIdCol  = r => findCol(r, ['product_id','productid']);
+const findCategoryCol   = r => findCol(r, ['product_category_name','category_name','category','product_category','dept','department']);
+const findCityCol       = r => findCol(r, ['customer_city','city','billing_city','shipping_city']);
+const findAmountCol     = r => findCol(r, ['payment_value','amount','total','revenue','price','order_item_total','sales_value','value']);
+const findStatusCol     = r => findCol(r, ['order_status','delivery_status','status','shipping_status']);
+
+// ══════════════════════════════════════════════════
+//  BUILD JOIN LOOKUP MAPS
+// ══════════════════════════════════════════════════
+function buildLookups() {
+  txByOrderId    = {};
+  txByCustomerId = {};
+  payByOrderId   = {};
+  ordersByOrderId = {};
+  productById    = {};
+  customerById   = {};
+
+  // Transactions → index by order_id and customer_id
+  if (store.transactions) {
+    const ocol = findOrderIdCol(store.transactions);
+    const ccol = findCustomerIdCol(store.transactions);
+    for (const row of store.transactions) {
+      if (ocol && row[ocol]) txByOrderId[String(row[ocol])] = row;
+      if (ccol && row[ccol]) {
+        const cid = String(row[ccol]);
+        if (!txByCustomerId[cid]) txByCustomerId[cid] = [];
+        txByCustomerId[cid].push(row);
+      }
+    }
+  }
+
+  // Payments → index by order_id
+  if (store.payments) {
+    const ocol = findOrderIdCol(store.payments);
+    for (const row of store.payments) {
+      if (ocol && row[ocol]) {
+        const oid = String(row[ocol]);
+        if (!payByOrderId[oid]) payByOrderId[oid] = [];
+        payByOrderId[oid].push(row);
+      }
+    }
+  }
+
+  // Order Items → index by order_id
+  if (store.orders) {
+    const ocol = findOrderIdCol(store.orders);
+    for (const row of store.orders) {
+      if (ocol && row[ocol]) {
+        const oid = String(row[ocol]);
+        if (!ordersByOrderId[oid]) ordersByOrderId[oid] = [];
+        ordersByOrderId[oid].push(row);
+      }
+    }
+  }
+
+  // Products → index by product_id
+  if (store.products) {
+    const pcol = findProductIdCol(store.products);
+    for (const row of store.products) {
+      if (pcol && row[pcol]) productById[String(row[pcol])] = row;
+    }
+  }
+
+  // Customers → index by customer_id
+  if (store.customers) {
+    const ccol = findCustomerIdCol(store.customers);
+    for (const row of store.customers) {
+      if (ccol && row[ccol]) customerById[String(row[ccol])] = row;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  TRANSACTION DATE FILTER
+//  All filtering is driven by order_purchase_timestamp
+//  in the Transactions table.
+// ══════════════════════════════════════════════════
+function getTxDateCol() {
+  if (!store.transactions) return null;
+  return findCol(store.transactions, ['order_purchase_timestamp','purchase_timestamp','order_purchase','purchase_date','order_date','created_at','timestamp','date']);
+}
+
+function getFilteredTransactions(dateFrom, dateTo) {
+  if (!store.transactions) return [];
+  const dc = getTxDateCol();
+  return store.transactions.filter(row => {
+    if (!dc) return true;
+    const d = parseDate(row[dc]);
+    if (!d) return true;
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo   && d > dateTo)   return false;
+    return true;
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  BUILD DASHBOARD
+// ══════════════════════════════════════════════════
+function buildDashboard() {
+  document.getElementById('loading-overlay').classList.add('active');
+  setTimeout(() => {
+    try {
+      buildLookups();
+      _renderDashboard();
+    } catch(e) { console.error(e); }
+    document.getElementById('loading-overlay').classList.remove('active');
+    document.getElementById('dash-divider').style.display = 'block';
+    document.getElementById('dashboard-section').style.display = 'block';
+    document.getElementById('dashboard-section').scrollIntoView({ behavior: 'smooth' });
+  }, 800);
+}
+
+function _renderDashboard() {
+  // Set default date range from order_purchase_timestamp in Transactions
+  if (store.transactions) {
+    const dc = getTxDateCol();
+    if (dc) {
+      const dates = store.transactions
+        .map(r => parseDate(r[dc]))
+        .filter(Boolean)
+        .sort((a, b) => a - b);
+      if (dates.length) {
+        document.getElementById('filter-date-from').value = dates[0].toISOString().slice(0,10);
+        document.getElementById('filter-date-to').value   = dates[dates.length-1].toISOString().slice(0,10);
+      }
+    }
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const metric      = document.getElementById('filter-metric').value;
+  const granularity = document.getElementById('filter-granularity').value;
+  const fromVal     = document.getElementById('filter-date-from').value;
+  const toVal       = document.getElementById('filter-date-to').value;
+  const dateFrom    = fromVal ? new Date(fromVal) : null;
+  const dateTo      = toVal   ? new Date(toVal + 'T23:59:59') : null;
+
+  updateKPIs(dateFrom, dateTo);
+  updateTrendChart(metric, granularity, dateFrom, dateTo);
+  updateCategoryChart(metric, granularity, dateFrom, dateTo);
+  updateCitiesTable(dateFrom, dateTo);
+}
+
+// ══════════════════════════════════════════════════
+//  KPI BUCKETS
+//  Filtered by date range (via Transactions timestamp)
+// ══════════════════════════════════════════════════
+function updateKPIs(dateFrom, dateTo) {
+  const filteredTx = getFilteredTransactions(dateFrom, dateTo);
+
+  // ── Late Deliveries ──
+  // order_status == 'delivered' counts as ON TIME; everything else is NOT delivered = we use
+  // the user's spec: delivered / total * 100 gives % delivered, so late = non-delivered
+  // Re-reading spec: "order_status = 'delivered' divided by total count" = % delivered on time
+  // We'll show % delivered (i.e. completed deliveries rate). Label kept as late for context.
+  const statusCol = findStatusCol(store.transactions);
+  let deliveredCount = 0;
+  let totalTx = filteredTx.length;
+  if (statusCol) {
+    for (const row of filteredTx) {
+      const s = String(row[statusCol] || '').toLowerCase().trim();
+      if (s === 'delivered') deliveredCount++;
+    }
+  }
+  const deliveredPct = totalTx > 0 ? (deliveredCount / totalTx * 100) : 0;
+
+  // ── Total Purchases ──
+  // Count distinct order IDs in filtered transactions (each tx = one order)
+  const ocol = findOrderIdCol(store.transactions);
+  const uniqueOrders = new Set(filteredTx.map(r => ocol ? String(r[ocol]) : null).filter(Boolean));
+  const totalPurchases = uniqueOrders.size || filteredTx.length;
+
+  // ── Total Customers ──
+  // Count distinct customer_id from the Customers file (not filtered by date)
+  let totalCustomers = 0;
+  if (store.customers) {
+    const ccol = findCustomerIdCol(store.customers);
+    const uniqueCustomers = new Set(
+      store.customers.map(r => ccol ? String(r[ccol]) : null).filter(Boolean)
+    );
+    totalCustomers = uniqueCustomers.size;
+  }
+
+  // ── Total Revenue ──
+  // Sum of payment_value from the Payments file (not joined, full sum)
+  let totalRevenue = 0;
+  if (store.payments) {
+    const amtCol = findAmountCol(store.payments);
+    if (amtCol) {
+      for (const p of store.payments) totalRevenue += parseFloat(p[amtCol]) || 0;
+    }
+  }
+
+  document.getElementById('kpi-late').textContent      = deliveredPct.toFixed(1) + '%';
+  document.getElementById('kpi-purchases').textContent  = totalPurchases.toLocaleString();
+  document.getElementById('kpi-customers').textContent  = totalCustomers.toLocaleString();
+  document.getElementById('kpi-revenue').textContent    = '$' + totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+// ══════════════════════════════════════════════════
+//  TREND CHART
+//  Date axis = order_purchase_timestamp from Transactions
+// ══════════════════════════════════════════════════
+function updateTrendChart(metric, granularity, dateFrom, dateTo) {
+  const filteredTx = getFilteredTransactions(dateFrom, dateTo);
+  const dc    = getTxDateCol();
+  const ocol  = findOrderIdCol(store.transactions);
+  const ccol  = findCustomerIdCol(store.transactions);
+  const stCol = findStatusCol(store.transactions);
+
+  const periodData = {};
+
+  if (metric === 'total_revenue') {
+    // Join each payment row to its transaction via order_id → get purchase date → bucket by period
+    if (store.payments) {
+      const payAmtCol = findAmountCol(store.payments);
+      const payOcol   = findOrderIdCol(store.payments);
+      if (payAmtCol && payOcol) {
+        for (const pay of store.payments) {
+          const oid = String(pay[payOcol] || '');
+          const tx  = txByOrderId[oid];
+          if (!tx) continue;
+          const d  = dc ? parseDate(tx[dc]) : null;
+          if (dateFrom && d && d < dateFrom) continue;
+          if (dateTo   && d && d > dateTo)   continue;
+          const pk = periodKey(d, granularity) || 'Unknown';
+          periodData[pk] = (periodData[pk] || 0) + (parseFloat(pay[payAmtCol]) || 0);
+        }
+      }
+    }
+
+  } else if (metric === 'total_customers') {
+    // For each period bucket, count distinct customer_ids from filtered transactions
+    for (const tx of filteredTx) {
+      const d  = dc ? parseDate(tx[dc]) : null;
+      const pk = periodKey(d, granularity) || 'Unknown';
+      if (!periodData[pk]) periodData[pk] = new Set();
+      if (ccol && tx[ccol]) periodData[pk].add(String(tx[ccol]));
+    }
+
+  } else if (metric === 'total_purchases') {
+    for (const tx of filteredTx) {
+      const d  = dc ? parseDate(tx[dc]) : null;
+      const pk = periodKey(d, granularity) || 'Unknown';
+      periodData[pk] = (periodData[pk] || 0) + 1;
+    }
+
+  } else if (metric === 'late_delivery') {
+    for (const tx of filteredTx) {
+      const d  = dc ? parseDate(tx[dc]) : null;
+      const pk = periodKey(d, granularity) || 'Unknown';
+      if (!periodData[pk]) periodData[pk] = { delivered: 0, total: 0 };
+      periodData[pk].total++;
+      if (stCol && String(tx[stCol] || '').toLowerCase().trim() === 'delivered') {
+        periodData[pk].delivered++;
+      }
+    }
+  }
+
+  const labels = Object.keys(periodData).sort();
+  const values = labels.map(pk => {
+    const v = periodData[pk];
+    if (metric === 'total_customers') return v instanceof Set ? v.size : v;
+    if (metric === 'late_delivery')   return v.total > 0 ? (v.delivered / v.total * 100) : 0;
+    return v;
+  });
+
+  const metricLabels = {
+    late_delivery:    '% Delivered On Time',
+    total_purchases:  'Total Purchases',
+    total_customers:  'Total Customers',
+    total_revenue:    'Revenue (USD)'
+  };
+
+  document.getElementById('trend-sub').textContent =
+    `${metricLabels[metric]} · ${granularity} · ${labels.length} data points`;
+
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: metricLabels[metric],
+        data: values,
+        borderColor: '#FF9900',
+        backgroundColor: 'rgba(255,153,0,0.08)',
+        pointBackgroundColor: '#FF9900',
+        pointRadius: labels.length > 60 ? 0 : 4,
+        pointHoverRadius: 6,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1C1C1C', borderColor: 'rgba(255,153,0,0.3)',
+          borderWidth: 1, titleColor: '#FF9900', bodyColor: '#F0EDE8', padding: 12
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#888', maxRotation: 45, font: { size: 11 } }, grid: { color: 'rgba(255,153,0,0.05)' } },
+        y: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(255,153,0,0.07)' } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  CATEGORY CHART  (Top 5)
+//  Join: Transactions → Order Items (order_id) → Products (product_id)
+//  Date filter via order_purchase_timestamp on Transactions
+// ══════════════════════════════════════════════════
+function updateCategoryChart(metric, granularity, dateFrom, dateTo) {
+  const filteredTx = getFilteredTransactions(dateFrom, dateTo);
+  if (!filteredTx.length) return;
+
+  const txOcol  = findOrderIdCol(store.transactions);
+  const amtCol  = store.payments ? findAmountCol(store.payments) : null;
+  // For order items
+  const oiPcol  = store.orders   ? findProductIdCol(store.orders) : null;
+  const oiAmt   = store.orders   ? findAmountCol(store.orders)   : null;
+  // For products
+  const prCatCol = store.products ? findCategoryCol(store.products) : null;
+
+  const catData = {};
+
+  for (const tx of filteredTx) {
+    const oid = txOcol ? String(tx[txOcol] || '') : '';
+
+    // Get category via: order_items[order_id] → product[product_id] → category
+    const items = ordersByOrderId[oid] || [];
+
+    if (items.length && oiPcol && prCatCol) {
+      for (const item of items) {
+        const pid = String(item[oiPcol] || '');
+        const prod = productById[pid];
+        const cat = prod ? (prod[prCatCol] || 'Unknown') : 'Unknown';
+
+        let value = 1;
+        if (metric === 'total_revenue') {
+          // prefer payment value; fallback to order item price
+          const pays = payByOrderId[oid] || [];
+          if (amtCol && pays.length) {
+            value = pays.reduce((s, p) => s + (parseFloat(p[amtCol]) || 0), 0) / items.length;
+          } else if (oiAmt) {
+            value = parseFloat(item[oiAmt]) || 0;
+          }
+        }
+        catData[cat] = (catData[cat] || 0) + value;
+      }
+    } else if (prCatCol && store.products) {
+      // No order-item link, use product categories flat
+      for (const prod of store.products) {
+        const cat = prod[prCatCol] || 'Unknown';
+        catData[cat] = (catData[cat] || 0) + 1;
+      }
+      break; // only iterate once
+    } else {
+      // Last resort: count transactions
+      catData['Orders'] = (catData['Orders'] || 0) + 1;
+    }
+  }
+
+  // Top 5
+  const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const labels = sorted.map(e => e[0]);
+  const values = sorted.map(e => e[1]);
+
+  const ctx = document.getElementById('category-chart').getContext('2d');
+  if (categoryChart) categoryChart.destroy();
+
+  categoryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Categories',
+        data: values,
+        backgroundColor: ['rgba(255,153,0,1)','rgba(255,153,0,0.82)','rgba(255,153,0,0.64)','rgba(255,153,0,0.46)','rgba(255,153,0,0.3)'],
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1C1C1C', borderColor: 'rgba(255,153,0,0.3)',
+          borderWidth: 1, titleColor: '#FF9900', bodyColor: '#F0EDE8', padding: 12
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(255,153,0,0.07)' } },
+        y: { ticks: { color: '#F0EDE8', font: { size: 12 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  CITIES TABLE  (Top 10)
+//  Join: Transactions (customer_id, date) → Customers (customer_city)
+//  Revenue: Transactions → Payments (payment_value)
+// ══════════════════════════════════════════════════
+function updateCitiesTable(dateFrom, dateTo) {
+  const filteredTx = getFilteredTransactions(dateFrom, dateTo);
+  if (!filteredTx.length) return;
+
+  const txCcol  = findCustomerIdCol(store.transactions);
+  const txOcol  = findOrderIdCol(store.transactions);
+  const amtCol  = store.payments ? findAmountCol(store.payments) : null;
+  const custCityCol = store.customers ? findCityCol(store.customers) : null;
+
+  const cityCustomers = {};  // city → Set of customer_ids
+  const cityRevenue   = {};  // city → total revenue
+
+  for (const tx of filteredTx) {
+    const cid  = txCcol ? String(tx[txCcol] || '') : '';
+    const cust = customerById[cid];
+    const city = cust && custCityCol ? String(cust[custCityCol] || '').trim() : null;
+    if (!city || city === 'null' || city === '') continue;
+
+    if (!cityCustomers[city]) cityCustomers[city] = new Set();
+    cityCustomers[city].add(cid);
+
+    // Revenue from payments
+    if (amtCol && txOcol) {
+      const oid  = String(tx[txOcol] || '');
+      const pays = payByOrderId[oid] || [];
+      for (const p of pays) cityRevenue[city] = (cityRevenue[city] || 0) + (parseFloat(p[amtCol]) || 0);
+    }
+  }
+
+  const sorted = Object.entries(cityCustomers)
+    .map(([city, set]) => [city, set.size])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const maxCust = sorted[0] ? sorted[0][1] : 1;
+
+  document.getElementById('cities-tbody').innerHTML = sorted.map(([city, count], i) => {
+    const rank = i + 1;
+    const badgeClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+    const rev = cityRevenue[city]
+      ? '$' + cityRevenue[city].toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : '—';
+    const pct = Math.round(count / maxCust * 100);
+    return `
+      <tr>
+        <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+        <td><strong>${city}</strong></td>
+        <td>${count.toLocaleString()}</td>
+        <td>${rev}</td>
+        <td>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
