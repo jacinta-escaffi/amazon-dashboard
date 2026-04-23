@@ -2,6 +2,8 @@
 
 > **Drop your CSVs. Watch your data come alive.**
 
+https://jacinta-escaffi.github.io/amazon-dashboard/
+
 DataPrime is a **zero-dependency, browser-only analytics dashboard** built for e-commerce data. Upload your five CSV exports, hit one button, and instantly get an interactive dashboard with KPIs, trend charts, category breakdowns, and a city-level customer map — all styled in Amazon's iconic orange and black.
 
 No server. No setup. No accounts. Just open the HTML file and go.
