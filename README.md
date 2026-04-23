@@ -2,8 +2,6 @@
 
 > **Drop your CSVs. Watch your data come alive.**
 
-![Dashboard Preview](https://img.shields.io/badge/status-live-brightgreen?style=flat-square) ![HTML](https://img.shields.io/badge/built%20with-HTML%20%2F%20JS-FF9900?style=flat-square) ![No Backend](https://img.shields.io/badge/backend-none-black?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)
-
 DataPrime is a **zero-dependency, browser-only analytics dashboard** built for e-commerce data. Upload your five CSV exports, hit one button, and instantly get an interactive dashboard with KPIs, trend charts, category breakdowns, and a city-level customer map — all styled in Amazon's iconic orange and black.
 
 No server. No setup. No accounts. Just open the HTML file and go.
